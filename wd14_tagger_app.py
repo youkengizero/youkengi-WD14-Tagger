@@ -7,6 +7,8 @@ import os
 import json
 import subprocess
 import asyncio
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import List, Optional, Dict, Tuple
 
@@ -242,6 +244,94 @@ def set_last_language(lang: str):
     save_config(config)
 
 
+# 模型下载配置
+MODEL_DOWNLOAD_URLS = {
+    "wd-convnext-tagger-v3": {
+        "model.onnx": "https://huggingface.co/SmilingWolf/wd-convnext-tagger-v3/resolve/main/model.onnx",
+        "selected_tags.csv": "https://huggingface.co/SmilingWolf/wd-convnext-tagger-v3/resolve/main/selected_tags.csv"
+    },
+    "wd-vit-large-tagger-v3": {
+        "model.onnx": "https://huggingface.co/SmilingWolf/wd-vit-large-tagger-v3/resolve/main/model.onnx",
+        "selected_tags.csv": "https://huggingface.co/SmilingWolf/wd-vit-large-tagger-v3/resolve/main/selected_tags.csv"
+    }
+}
+
+
+def download_file(url: str, dest_path: str, progress_callback=None) -> bool:
+    """下载文件，支持进度回调"""
+    try:
+        # 创建目标目录
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        
+        # 检查是否已存在部分下载的文件
+        if os.path.exists(dest_path):
+            print(f"文件已存在: {dest_path}")
+            return True
+        
+        print(f"正在下载: {url}")
+        print(f"保存到: {dest_path}")
+        
+        # 使用 urllib 下载
+        def report_hook(block_num, block_size, total_size):
+            if total_size > 0 and progress_callback:
+                downloaded = block_num * block_size
+                percent = min(100, int(downloaded * 100 / total_size))
+                progress_callback(percent)
+        
+        urllib.request.urlretrieve(url, dest_path, reporthook=report_hook)
+        print(f"✅ 下载完成: {dest_path}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ 下载失败: {e}")
+        # 清理不完整的文件
+        if os.path.exists(dest_path):
+            try:
+                os.remove(dest_path)
+            except:
+                pass
+        return False
+
+
+def download_model(model_name: str, progress_callback=None) -> bool:
+    """下载指定模型的所有文件"""
+    if model_name not in MODEL_DOWNLOAD_URLS:
+        print(f"不支持的模型: {model_name}")
+        return False
+    
+    model_dir = os.path.join(MODEL_DIR, model_name)
+    urls = MODEL_DOWNLOAD_URLS[model_name]
+    
+    # 检查是否已完整下载
+    all_exist = True
+    for filename in urls.keys():
+        if not os.path.exists(os.path.join(model_dir, filename)):
+            all_exist = False
+            break
+    
+    if all_exist:
+        print(f"模型 {model_name} 已存在，跳过下载")
+        return True
+    
+    print(f"\n{'='*60}")
+    print(f"📥 正在下载模型: {model_name}")
+    print(f"{'='*60}")
+    
+    success = True
+    for filename, url in urls.items():
+        dest_path = os.path.join(model_dir, filename)
+        if not download_file(url, dest_path, progress_callback):
+            success = False
+            break
+    
+    if success:
+        print(f"✅ 模型 {model_name} 下载完成！")
+    else:
+        print(f"❌ 模型 {model_name} 下载失败")
+    
+    return success
+
+
 def get_wd14_models() -> List[str]:
     """获取WD14tagger模型列表"""
     models = []
@@ -254,9 +344,16 @@ def get_wd14_models() -> List[str]:
 
 
 def load_wd14_model(model_name: str) -> Tuple[Optional[ort.InferenceSession], Optional[Tuple[List[str], List[str]]]]:
-    """加载WD14tagger模型"""
+    """加载WD14tagger模型，如果不存在则自动下载"""
     model_path = os.path.join(MODEL_DIR, model_name, "model.onnx")
     tags_path = os.path.join(MODEL_DIR, model_name, "selected_tags.csv")
+    
+    # 检查模型文件是否存在，不存在则尝试下载
+    if not os.path.exists(model_path) or not os.path.exists(tags_path):
+        print(f"模型文件不存在，尝试自动下载: {model_name}")
+        if not download_model(model_name):
+            print(f"❌ 模型下载失败，请手动下载")
+            return None, None
     
     if not os.path.exists(model_path):
         print(f"模型文件不存在: {model_path}")

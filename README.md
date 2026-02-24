@@ -40,18 +40,41 @@ pip install -r requirements.txt
 
 ### 3. 准备模型文件
 
-将 WD14tagger 模型文件放置在 `models` 文件夹中，目录结构如下：
+本项目使用 WD14tagger 模型进行图片打标。由于模型文件较大（约300MB+），未包含在仓库中，需要单独下载。
 
+#### 自动下载（推荐）
+
+首次启动应用时，程序会自动检测并下载所需的模型文件：
+- 支持自动下载 `model.onnx` 和 `selected_tags.csv`
+- 下载完成后会自动保存到 `models` 文件夹
+- 支持断点续传，下载中断后可以继续
+
+#### 手动下载
+
+如果自动下载失败，可以手动下载模型文件：
+
+**模型下载地址：**
+- [wd-convnext-tagger-v3](https://huggingface.co/SmilingWolf/wd-convnext-tagger-v3) - 推荐，准确率较高
+- [wd-vit-large-tagger-v3](https://huggingface.co/SmilingWolf/wd-vit-large-tagger-v3) - 准确率最高，但速度较慢
+
+**目录结构：**
 ```
 wd14_tagger_app/
 ├── models/
-│   └── wd-v1-4-vit-tagger-v2/  # 模型文件夹
+│   └── wd-convnext-tagger-v3/  # 模型文件夹
 │       ├── model.onnx          # ONNX 模型文件
 │       └── selected_tags.csv   # 标签文件
 ├── wd14_tagger_app.py          # 主应用文件
 ├── requirements.txt            # 依赖文件
 └── README.md                   # 说明文档
 ```
+
+**手动下载步骤：**
+1. 访问上述 Hugging Face 模型页面
+2. 点击 "Files and versions" 标签
+3. 下载 `model.onnx` 和 `selected_tags.csv` 文件
+4. 在 `models` 文件夹下创建模型文件夹（如 `wd-convnext-tagger-v3`）
+5. 将下载的文件放入该文件夹
 
 ## 使用方法
 
