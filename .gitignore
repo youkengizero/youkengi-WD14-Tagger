@@ -49,3 +49,12 @@ Thumbs.db
 
 # Config with personal settings
 config.json
+
+# Upload scripts
+github_uploader.py
+update_repo.py
+
+# Reference folders
+参考文件/
+nicegui_components/
+主程序备份/
