@@ -1,0 +1,6 @@
+nicegui
+Pillow
+opencv-python
+numpy
+onnxruntime
+python-multipart
